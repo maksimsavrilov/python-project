@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: postgres_smart_home
+    environment:
+      - POSTGRES_USER=app_user
+      - POSTGRES_PASSWORD=app_password
+      - POSTGRES_DB=smart_home
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data:Z
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:Z
+    restart: unless-stopped
+
+  web-dev:
+    image: localhost/my-fastapi-app:dev
+    build:
+      context: .
+      target: development
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - .:/app:z
+    environment:
+      - ENV=development
+      - DATABASE_URL=postgresql+asyncpg://app_user:app_password@db:5432/smart_home
+    depends_on:
+      - db
+
+  web-prod:
+    image: localhost/my-fastapi-app:prod
+    build:
+      context: .
+      target: production
+    ports:
+      - "127.0.0.1:8080:8000"
+    environment:
+      - ENV=production
+      - DATABASE_URL=postgresql+asyncpg://app_user:app_password@db:5432/smart_home
+    depends_on:
+      - db
+
+  frontend-dev:
+    image: localhost/my-react-app:dev
+    build:
+      context: ./frontend
+      target: development
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend:/app:z
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - web-dev
+
+volumes:
+  pgdata:
