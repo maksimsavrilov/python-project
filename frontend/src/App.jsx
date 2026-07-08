@@ -8,15 +8,12 @@ function App() {
   const [isOn, setIsOn] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Используем адрес бэкенда из переменных окружения Vite (или локальный фолбэк)
   const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-  // 1. ФУНКЦИЯ АВТОРИЗАЦИИ (ВХОДА)
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // OAuth2PasswordRequestForm на бэкенде ждет данные в формате x-www-form-urlencoded
     const formData = new URLSearchParams();
     formData.append('username', username);
     formData.append('password', password);
@@ -42,7 +39,6 @@ function App() {
     }
   };
 
-  // 2. ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ЛАМПОЧКИ (ЗАЩИЩЕННАЯ)
   const handleToggle = async () => {
     const nextState = !isOn;
     setIsOn(nextState);
@@ -53,7 +49,6 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // ПЕРЕДАЕМ ТОКЕН В ЗАГОЛОВКЕ!
           'Authorization': `Bearer ${token}`, 
         },
         body: JSON.stringify({ status: nextState }),
@@ -71,7 +66,6 @@ function App() {
     }
   };
 
-  // --- ИНТЕРФЕЙС ЭКРАНА ВХОДА ---
   if (!token) {
     return (
       <div style={{ textAlign: 'center', marginTop: '100px', fontFamily: 'sans-serif' }}>
@@ -93,7 +87,6 @@ function App() {
     );
   }
 
-  // --- ИНТЕРФЕЙС УПРАВЛЕНИЯ ЛАМПОЧКОЙ ---
   const switchStyles = {
     display: 'inline-block', width: '60px', height: '34px', position: 'relative',
     backgroundColor: isOn ? '#4caf50' : '#ccc', borderRadius: '34px',
