@@ -4,15 +4,19 @@ function App() {
   const [token, setToken] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  
   const [isOn, setIsOn] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  // Используем адрес бэкенда из переменных окружения Vite (или локальный фолбэк)
+  const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
+  // 1. ФУНКЦИЯ АВТОРИЗАЦИИ (ВХОДА)
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
 
+    // OAuth2PasswordRequestForm на бэкенде ждет данные в формате x-www-form-urlencoded
     const formData = new URLSearchParams();
     formData.append('username', username);
     formData.append('password', password);
@@ -27,7 +31,7 @@ function App() {
       const data = await response.json();
 
       if (response.ok && data.access_token) {
-        setToken(data.access_token);
+        setToken(data.access_token); // Сохраняем токен!
       } else {
         alert('Ошибка входа: ' + (data.detail || 'Неверные данные'));
       }
@@ -38,6 +42,7 @@ function App() {
     }
   };
 
+  // 2. ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ЛАМПОЧКИ (ЗАЩИЩЕННАЯ)
   const handleToggle = async () => {
     const nextState = !isOn;
     setIsOn(nextState);
@@ -48,7 +53,8 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          // ПЕРЕДАЕМ ТОКЕН В ЗАГОЛОВКЕ!
+          'Authorization': `Bearer ${token}`, 
         },
         body: JSON.stringify({ status: nextState }),
       });
@@ -56,7 +62,7 @@ function App() {
       const data = await response.json();
       if (!response.ok) {
         alert('Ошибка бэкенда: ' + (data.detail || 'Нет доступа'));
-        if (response.status === 401) setToken('');
+        if (response.status === 401) setToken(''); // Если токен протух, сбрасываем авторизацию
       }
     } catch (error) {
       alert('Ошибка сети при отправке команды');
@@ -65,6 +71,7 @@ function App() {
     }
   };
 
+  // --- ИНТЕРФЕЙС ЭКРАНА ВХОДА ---
   if (!token) {
     return (
       <div style={{ textAlign: 'center', marginTop: '100px', fontFamily: 'sans-serif' }}>
@@ -86,26 +93,17 @@ function App() {
     );
   }
 
+  // --- ИНТЕРФЕЙС УПРАВЛЕНИЯ ЛАМПОЧКОЙ ---
   const switchStyles = {
-    display: 'inline-block',
-    width: '60px',
-    height: '34px',
-    position: 'relative',
-    backgroundColor: isOn ? '#4caf50' : '#ccc',
-    borderRadius: '34px',
-    cursor: loading ? 'not-allowed' : 'pointer',
-    transition: '0.4s',
+    display: 'inline-block', width: '60px', height: '34px', position: 'relative',
+    backgroundColor: isOn ? '#4caf50' : '#ccc', borderRadius: '34px',
+    cursor: loading ? 'not-allowed' : 'pointer', transition: '0.4s',
   };
 
   const circleStyles = {
-    position: 'absolute',
-    height: '26px',
-    width: '26px',
-    left: isOn ? '30px' : '4px',
-    bottom: '4px',
-    backgroundColor: 'white',
-    borderRadius: '50%',
-    transition: '0.4s',
+    position: 'absolute', height: '26px', width: '26px',
+    left: isOn ? '30px' : '4px', bottom: '4px',
+    backgroundColor: 'white', borderRadius: '50%', transition: '0.4s',
   };
 
   return (
@@ -119,9 +117,7 @@ function App() {
       </p>
       {loading && <span style={{ color: 'gray' }}>Связь с сервером...</span>}
       <br />
-      <button onClick={() => setToken('')} style={{ marginTop: '30px' }}>
-        Выйти из аккаунта
-      </button>
+      <button onClick={() => setToken('')} style={{ marginTop: '30px' }}>Выйти из аккаунта</button>
     </div>
   );
 }
