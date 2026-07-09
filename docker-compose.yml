@@ -13,8 +13,11 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:Z
     restart: unless-stopped
 
+  # --- (Dev) ---
   web-dev:
     image: localhost/my-fastapi-app:dev
+    profiles:
+      - dev
     build:
       context: .
       target: development
@@ -27,26 +30,14 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM}
-    depends_on:
-      - db
-
-  web-prod:
-    image: localhost/my-fastapi-app:prod
-    build:
-      context: .
-      target: production
-    ports:
-      - "127.0.0.1:8080:8000"
-    environment:
-      - ENV=production
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
     depends_on:
       - db
 
   frontend-dev:
     image: localhost/my-react-app:dev
+    profiles:
+      - dev
     build:
       context: ./frontend
       target: development
@@ -59,6 +50,39 @@ services:
       - VITE_API_URL=${VITE_API_URL}
     depends_on:
       - web-dev
+
+  # --- (Prod) ---
+  web-prod:
+    image: localhost/my-fastapi-app:prod
+    profiles:
+      - prod # no run when podman compose up
+    build:
+      context: .
+      target: production # switch Dockerfile to production stage
+    ports:
+      - "127.0.0.1:8080:8000" # now backend listens on 8080
+    environment:
+      - ENV=production
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+    depends_on:
+      - db
+
+  frontend-prod:
+    image: localhost/my-react-app:prod
+    profiles:
+      - prod # no run when podman compose up
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://127.0.0.1:8080
+      target: production # switch Dockerfile to production stage
+    ports:
+      - "127.0.0.1:8081:80" # now frontend will be available on the port 8081
+    depends_on:
+      - web-prod
 
 volumes:
   pgdata:

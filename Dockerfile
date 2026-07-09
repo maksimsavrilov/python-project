@@ -1,4 +1,3 @@
-# For more information, please refer to https://aka.ms/vscode-docker-python
 FROM python:3-slim AS base
 
 EXPOSE 8000
