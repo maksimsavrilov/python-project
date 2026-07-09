@@ -5,14 +5,13 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, Field
-from sqlalchemy import CheckConstraint, ForeignKey, func, select, text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from typing_extensions import Annotated
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-SECRET_KEY = "super-secret-key-12345-and-very-long-to-make-it-secure"
-ALGORITHM = "HS256"
+JWT_SECRET_KEY = str(os.getenv("JWT_SECRET_KEY"))
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql+asyncpg://app_user:app_password@localhost:5432/smart_home",
@@ -31,21 +30,26 @@ class UserSchema(BaseModel):
 
 class UserModel(Base):
     __tablename__ = "users"
+
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     username: Mapped[str] = mapped_column(unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True)
-    def __repr__(self) -> str:
-        return f"<User(id={self.id}, username='{self.username}', is_active={self.is_active})>"
+
+    # (One-to-Many)
+    logs: Mapped[list["SwitchLogModel"]] = relationship(back_populates="user")
 
 
 class SwitchLogModel(Base):
     __tablename__ = "switch_logs"
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    status: Mapped[int] = mapped_column(nullable=False)  # 1 или 0
-    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    changed_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now())
 
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    status: Mapped[int] = mapped_column(nullable=False)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    changed_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # one-to-one relationship with UserModel
+    user: Mapped[UserModel | None] = relationship(back_populates="logs")
 
 class DeviceSetupSchema(BaseModel):
     id: int
@@ -78,7 +82,7 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db_session),
 ):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         username: str = str(payload.get("sub"))
         if username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Невалидный токен")

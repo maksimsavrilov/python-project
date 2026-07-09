@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from common import (
     ALGORITHM,
-    SECRET_KEY,
+    JWT_SECRET_KEY,
     UserModel,
     UserSchema,
     get_db_session,
@@ -72,5 +72,5 @@ async def login(
         "exp": expire,
     }
 
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=ALGORITHM)
     return {"access_token": token, "token_type": "bearer"}

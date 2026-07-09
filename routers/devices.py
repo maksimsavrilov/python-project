@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, text, update
+from sqlalchemy import desc, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from common import DeviceSetupModel, DeviceSetupSchema, SwitchStateSchema, UserModel, get_current_user, get_db_session
+from sqlalchemy.orm import joinedload
+from common import DeviceSetupModel, DeviceSetupSchema, SwitchLogModel, SwitchStateSchema, UserModel, get_current_user, get_db_session
 
 router = APIRouter(tags=["devices"])
 
@@ -19,7 +20,7 @@ async def toggle_device(
 
     return {
         "success": True,
-        "message": f"Пользователь {current_user.username} (ID: {user_id}) переключил лампочку!",
+        "message": f"User {current_user.username} (ID: {user_id}) toggled the light!",
     }
 
 
@@ -38,13 +39,13 @@ async def setup_device(
         db.add(new_device)
         return {
             "success": True,
-            "message": f"Пользователь '{current_user.username}' добавил новое устройство '{device.name}'",
+            "message": f"User '{current_user.username}' added a new device '{device.name}'",
         }
 
     existing_device.brightness = device.brightness
     return {
         "success": True,
-        "message": f"Пользователь '{current_user.username}' успешно настроил '{device.name}'!",
+        "message": f"User '{current_user.username}' successfully configured '{device.name}'!",
     }
 
 
@@ -57,6 +58,30 @@ async def get_device_status(
     result = await db.execute(query)
     device = result.scalar_one_or_none()
     if not device:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Устройство не найдено")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
 
     return device
+
+
+@router.get("/api/device/logs")
+async def get_device_logs(
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    query = select(SwitchLogModel)\
+        .options(joinedload(SwitchLogModel.user))\
+        .order_by(desc(SwitchLogModel.changed_at))\
+        .limit(10)
+    
+    result = await db.execute(query)
+    logs = result.scalars().all()
+    return [
+        {
+            "id": log.id,
+            "status": log.status,
+            "user_id": log.user_id,
+            "username": log.user.username if log.user else "Unknown user",
+            "changed_at": log.changed_at.isoformat()
+        } 
+        for log in logs
+    ]
