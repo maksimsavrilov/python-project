@@ -1,0 +1,17 @@
+[project]
+name = "python-project"
+version = "0.1.0"
+description = "some FastAPI/React tests"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.139.0",
+    "pydantic==2.13.4",
+    "uvicorn==0.50.2",
+    "PyJWT==2.13.0",
+    "python-multipart==0.0.32",
+    "asyncpg==0.31.0",
+    "psycopg2-binary==2.9.12",
+    "SQLAlchemy==2.0.51",
+    "bcrypt==5.0.0",
+]

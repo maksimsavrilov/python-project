@@ -6,8 +6,13 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
-COPY requirements.txt .
-RUN python -m pip install -r requirements.txt --root-user-action=ignore
+ENV PATH="/app/.venv/bin:$PATH"
+
+RUN python -m pip install --upgrade pip && \
+    python -m pip install --no-cache-dir uv
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev --no-install-project
 
 FROM base AS development
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
